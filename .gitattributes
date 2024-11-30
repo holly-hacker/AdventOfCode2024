@@ -1,0 +1,2 @@
+# Ensure input files are lf, so Windows doesn't mess up line endings
+*.txt	text eol=lf
