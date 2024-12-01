@@ -32,7 +32,7 @@ macro_rules! register_days {
 
 // === Register days here! ===
 register_days! {
-    // 01 silver,
+    01 gold,
 }
 
 fn run_timed<T, F>(fun: F) -> (T, std::time::Duration)
