@@ -1,3 +1,4 @@
+use tinyvec::ArrayVec;
 use utils::fast_parse_int;
 
 use super::*;
@@ -13,16 +14,20 @@ impl SolutionSilver<usize> for Day {
         input
             .lines()
             .map(|line| {
-                let lines = line.split(' ').map(fast_parse_int).collect::<Vec<_>>();
+                let nums = line
+                    .split(' ')
+                    .map(fast_parse_int)
+                    .collect::<ArrayVec<[_; 8]>>();
 
-                let all_safe_inc = lines
+                let all_safe_inc = nums
                     .windows(2)
                     .all(|w| w[0] < w[1] && w[0].abs_diff(w[1]) <= 3);
-                let all_safe_dec = lines
-                    .windows(2)
-                    .all(|w| w[0] > w[1] && w[0].abs_diff(w[1]) <= 3);
+                let all_safe_inc_or_dec = all_safe_inc
+                    || nums
+                        .windows(2)
+                        .all(|w| w[0] > w[1] && w[0].abs_diff(w[1]) <= 3);
 
-                all_safe_inc || all_safe_dec
+                all_safe_inc_or_dec
             })
             .map(|l| l as usize)
             .sum()
@@ -36,20 +41,24 @@ impl SolutionGold<usize, usize> for Day {
         input
             .lines()
             .map(|line| {
-                let lines = line.split(' ').map(fast_parse_int).collect::<Vec<_>>();
+                let nums = line
+                    .split(' ')
+                    .map(fast_parse_int)
+                    .collect::<ArrayVec<[_; 8]>>();
 
-                (0..lines.len()).any(|skip| {
-                    let mut lines = lines.clone();
-                    lines.remove(skip);
+                (0..nums.len()).any(|skip| {
+                    let mut nums = nums.clone();
+                    nums.remove(skip);
 
-                    let all_safe_inc = lines
+                    let all_safe_inc = nums
                         .windows(2)
                         .all(|w| w[0] < w[1] && w[0].abs_diff(w[1]) <= 3);
-                    let all_safe_dec = lines
-                        .windows(2)
-                        .all(|w| w[0] > w[1] && w[0].abs_diff(w[1]) <= 3);
+                    let all_safe_inc_or_dec = all_safe_inc
+                        || nums
+                            .windows(2)
+                            .all(|w| w[0] > w[1] && w[0].abs_diff(w[1]) <= 3);
 
-                    all_safe_inc || all_safe_dec
+                    all_safe_inc_or_dec
                 })
             })
             .map(|l| l as usize)
