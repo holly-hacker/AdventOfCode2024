@@ -1,5 +1,5 @@
-use regex::Regex;
-use utils::fast_parse_int;
+use regex::bytes::Regex;
+use utils::fast_parse_int_from_bytes;
 
 use super::*;
 
@@ -11,13 +11,12 @@ impl SolutionSilver<usize> for Day {
     const INPUT_REAL: &'static str = include_str!("input_real.txt");
 
     fn calculate_silver(input: &str) -> usize {
-        // mul\((\d+),(\d+)\)
-        let regex = Regex::new(r"mul\((\d+),(\d+)\)").unwrap();
+        let regex = Regex::new(r"mul\(([0-9]+),([0-9]+)\)").unwrap();
         regex
-            .captures_iter(input)
+            .captures_iter(input.as_bytes())
             .map(|ca| {
-                fast_parse_int(ca.get(1).unwrap().as_str())
-                    * fast_parse_int(ca.get(2).unwrap().as_str())
+                fast_parse_int_from_bytes(ca.get(1).unwrap().as_bytes())
+                    * fast_parse_int_from_bytes(ca.get(2).unwrap().as_bytes())
             })
             .sum()
     }
@@ -28,16 +27,16 @@ impl SolutionGold<usize, usize> for Day {
 
     fn calculate_gold(input: &str) -> usize {
         let mut enable = true;
-        let regex = Regex::new(r"mul\((\d+),(\d+)\)|do\(\)|don't\(\)").unwrap();
+        let regex = Regex::new(r"mul\(([0-9]+),([0-9]+)\)|do\(\)|don't\(\)").unwrap();
         regex
-            .captures_iter(input)
+            .captures_iter(input.as_bytes())
             .map(|ca| {
-                match ca.get(0).unwrap().as_str().as_bytes()[2] {
+                match ca.get(0).unwrap().as_bytes()[2] {
                     b'l' => {
                         // mul
                         enable as usize
-                            * fast_parse_int(ca.get(1).unwrap().as_str())
-                            * fast_parse_int(ca.get(2).unwrap().as_str())
+                            * fast_parse_int_from_bytes(ca.get(1).unwrap().as_bytes())
+                            * fast_parse_int_from_bytes(ca.get(2).unwrap().as_bytes())
                     }
                     b'(' => {
                         // do

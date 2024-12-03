@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 paste = "1"
-regex = "1.11.1"
+regex = { version = "1.11.1", default-features = false, features = ["std", "perf"] }
 tinyvec = { version = "1.8.0", features = ["alloc"] }
 
 [dev-dependencies]
