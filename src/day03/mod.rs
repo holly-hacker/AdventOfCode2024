@@ -1,3 +1,4 @@
+use memchr::memmem;
 use regex::bytes::Regex;
 use utils::fast_parse_int_from_bytes;
 
@@ -11,12 +12,47 @@ impl SolutionSilver<usize> for Day {
     const INPUT_REAL: &'static str = include_str!("input_real.txt");
 
     fn calculate_silver(input: &str) -> usize {
-        let regex = Regex::new(r"mul\(([0-9]+),([0-9]+)\)").unwrap();
-        regex
-            .captures_iter(input.as_bytes())
-            .map(|ca| {
-                fast_parse_int_from_bytes(ca.get(1).unwrap().as_bytes())
-                    * fast_parse_int_from_bytes(ca.get(2).unwrap().as_bytes())
+        const MAX_NUM_LEN: usize = 4;
+        let input = input.as_bytes();
+
+        memmem::find_iter(input, b"mul(")
+            .map(|idx| {
+                let num1_start = idx + 4;
+                let Some(num1_len) = (&input
+                    [num1_start..(num1_start + MAX_NUM_LEN).min(input.len())])
+                    .iter()
+                    .position(|&a| a == b',')
+                else {
+                    return 0;
+                };
+                if num1_len > MAX_NUM_LEN {
+                    return 0;
+                }
+                let num1_slice = &input[num1_start..num1_start + num1_len];
+                if num1_slice.iter().any(|&b| !b.is_ascii_digit()) {
+                    return 0;
+                }
+
+                let num2_start = num1_start + num1_len + 1;
+                let Some(num2_len) = (&input
+                    [num2_start..(num2_start + MAX_NUM_LEN).min(input.len())])
+                    .iter()
+                    .position(|&a| a == b')')
+                else {
+                    return 0;
+                };
+                if num2_len > MAX_NUM_LEN {
+                    return 0;
+                }
+                let num2_slice = &input[num2_start..num2_start + num2_len];
+                if num2_slice.iter().any(|&b| !b.is_ascii_digit()) {
+                    return 0;
+                }
+
+                let num1 = fast_parse_int_from_bytes(num1_slice);
+                let num2 = fast_parse_int_from_bytes(num2_slice);
+
+                num1 * num2
             })
             .sum()
     }
