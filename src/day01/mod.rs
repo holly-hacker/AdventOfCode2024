@@ -1,4 +1,4 @@
-use utils::fast_parse_int;
+use utils::fast_parse_int_from_bytes;
 
 use super::*;
 
@@ -10,15 +10,25 @@ impl SolutionSilver<usize> for Day {
     const INPUT_REAL: &'static str = include_str!("input_real.txt");
 
     fn calculate_silver(input: &str) -> usize {
+        let input = input.as_bytes();
+
+        let line_len = input.iter().position(|&c| c == b'\n').unwrap();
+        let stride = line_len + 1;
+        let number_len = (line_len - 3) / 2;
+        let line_count = (input.len() + 1) / stride;
+
         let mut nums1 = Vec::with_capacity(1000);
         let mut nums2 = Vec::with_capacity(1000);
-        input
-            .lines()
-            .map(|line| line.split_once("   ").unwrap())
-            .for_each(|(left, right)| {
-                nums1.push(fast_parse_int(left));
-                nums2.push(fast_parse_int(right));
-            });
+
+        (0..line_count).for_each(|i| {
+            let line_start = stride * i;
+            let num2_start = line_start + number_len + 3;
+            let num1 = fast_parse_int_from_bytes(&input[line_start..line_start + number_len]);
+            let num2 = fast_parse_int_from_bytes(&input[num2_start..num2_start + number_len]);
+
+            nums1.push(num1);
+            nums2.push(num2);
+        });
 
         nums1.sort();
         nums2.sort();
@@ -57,16 +67,25 @@ impl SolutionGold<usize, usize> for Day {
 
 impl Day {
     fn calculate_gold_opt(input: &str) -> usize {
+        let input = input.as_bytes();
+
+        let line_len = input.iter().position(|&c| c == b'\n').unwrap();
+        let stride = line_len + 1;
+        let number_len = (line_len - 3) / 2;
+        let line_count = (input.len() + 1) / stride;
+
         let mut nums1 = Vec::with_capacity(1000);
         let mut nums2 = Vec::with_capacity(1000);
-        input
-            .lines()
-            .map(|line| line.split_once("   ").unwrap())
-            .for_each(|(left, right)| {
-                nums1.push(fast_parse_int(left));
-                // *nums2.entry(fast_parse_int(right)).or_default() += 1;
-                nums2.push(fast_parse_int(right));
-            });
+
+        (0..line_count).for_each(|i| {
+            let line_start = stride * i;
+            let num2_start = line_start + number_len + 3;
+            let num1 = fast_parse_int_from_bytes(&input[line_start..line_start + number_len]);
+            let num2 = fast_parse_int_from_bytes(&input[num2_start..num2_start + number_len]);
+
+            nums1.push(num1);
+            nums2.push(num2);
+        });
 
         // convert nums2 into a pseudo-hashmap
         nums2.sort();
