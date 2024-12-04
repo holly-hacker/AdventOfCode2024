@@ -15,89 +15,41 @@ impl SolutionSilver<usize> for Day {
         let mut count = 0;
         for y in 0..h {
             for x in 0..w {
-                // check down
-                if y + 3 < h {
-                    if grid[y][x] == b'X'
-                        && grid[y + 1][x] == b'M'
-                        && grid[y + 2][x] == b'A'
-                        && grid[y + 3][x] == b'S'
-                    {
-                        count += 1;
+                for (dir_x, dir_y) in [
+                    (-1, -1),
+                    (-1, 0),
+                    (-1, 1),
+                    (0, -1),
+                    (0, 1),
+                    (1, -1),
+                    (1, 0),
+                    (1, 1),
+                ] {
+                    if dir_x < 0 && x < 3 {
+                        continue;
                     }
-                }
-
-                // check up
-                if y >= 3 {
-                    if grid[y][x] == b'X'
-                        && grid[y - 1][x] == b'M'
-                        && grid[y - 2][x] == b'A'
-                        && grid[y - 3][x] == b'S'
-                    {
-                        count += 1;
+                    if dir_x > 0 && x + 3 >= w {
+                        continue;
                     }
-                }
-
-                // check left
-                if x + 3 < w {
-                    if grid[y][x] == b'X'
-                        && grid[y][x + 1] == b'M'
-                        && grid[y][x + 2] == b'A'
-                        && grid[y][x + 3] == b'S'
-                    {
-                        count += 1;
+                    if dir_y < 0 && y < 3 {
+                        continue;
                     }
-                }
-
-                // check up
-                if x >= 3 {
-                    if grid[y][x] == b'X'
-                        && grid[y][x - 1] == b'M'
-                        && grid[y][x - 2] == b'A'
-                        && grid[y][x - 3] == b'S'
-                    {
-                        count += 1;
+                    if dir_y > 0 && y + 3 >= h {
+                        continue;
                     }
-                }
 
-                // check down-right
-                if y + 3 < h && x + 3 < w {
-                    if grid[y][x] == b'X'
-                        && grid[y + 1][x + 1] == b'M'
-                        && grid[y + 2][x + 2] == b'A'
-                        && grid[y + 3][x + 3] == b'S'
-                    {
-                        count += 1;
-                    }
-                }
+                    let y1 = (y as isize + dir_y as isize * 1) as usize;
+                    let y2 = (y as isize + dir_y as isize * 2) as usize;
+                    let y3 = (y as isize + dir_y as isize * 3) as usize;
 
-                // check up-left
-                if y >= 3 && x >= 3 {
-                    if grid[y][x] == b'X'
-                        && grid[y - 1][x - 1] == b'M'
-                        && grid[y - 2][x - 2] == b'A'
-                        && grid[y - 3][x - 3] == b'S'
-                    {
-                        count += 1;
-                    }
-                }
+                    let x1 = (x as isize + dir_x as isize * 1) as usize;
+                    let x2 = (x as isize + dir_x as isize * 2) as usize;
+                    let x3 = (x as isize + dir_x as isize * 3) as usize;
 
-                // check down-left
-                if y + 3 < h && x >= 3 {
                     if grid[y][x] == b'X'
-                        && grid[y + 1][x - 1] == b'M'
-                        && grid[y + 2][x - 2] == b'A'
-                        && grid[y + 3][x - 3] == b'S'
-                    {
-                        count += 1;
-                    }
-                }
-
-                // check up-right
-                if y >= 3 && x + 3 < w {
-                    if grid[y][x] == b'X'
-                        && grid[y - 1][x + 1] == b'M'
-                        && grid[y - 2][x + 2] == b'A'
-                        && grid[y - 3][x + 3] == b'S'
+                        && grid[y1][x1] == b'M'
+                        && grid[y2][x2] == b'A'
+                        && grid[y3][x3] == b'S'
                     {
                         count += 1;
                     }
@@ -120,13 +72,16 @@ impl SolutionGold<usize, usize> for Day {
         let mut count = 0;
         for y in 1..h - 1 {
             for x in 1..w - 1 {
+                // check center of the cross
                 if grid[y][x] != b'A' {
                     continue;
                 }
 
+                // check diagonal top-left to bottom-right
                 let check1 = (grid[y - 1][x - 1] == b'M' && grid[y + 1][x + 1] == b'S')
                     || (grid[y + 1][x + 1] == b'M' && grid[y - 1][x - 1] == b'S');
 
+                // check diagonal top-right to bottom-left
                 let check2 = (grid[y + 1][x - 1] == b'M' && grid[y - 1][x + 1] == b'S')
                     || (grid[y - 1][x + 1] == b'M' && grid[y + 1][x - 1] == b'S');
 
