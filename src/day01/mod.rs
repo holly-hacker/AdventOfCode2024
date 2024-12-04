@@ -35,7 +35,7 @@ impl SolutionSilver<usize> for Day {
 
         nums1
             .into_iter()
-            .zip(nums2.into_iter())
+            .zip(nums2)
             .map(|(a, b)| a.abs_diff(b))
             .sum()
     }

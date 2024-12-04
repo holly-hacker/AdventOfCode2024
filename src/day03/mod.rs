@@ -18,8 +18,8 @@ impl SolutionSilver<usize> for Day {
         memmem::find_iter(input, b"mul(")
             .map(|idx| {
                 let num1_start = idx + 4;
-                let Some(num1_len) = (&input
-                    [num1_start..(num1_start + MAX_NUM_LEN).min(input.len())])
+                let Some(num1_len) = input
+                    [num1_start..(num1_start + MAX_NUM_LEN).min(input.len())]
                     .iter()
                     .position(|&a| a == b',')
                 else {
@@ -34,8 +34,8 @@ impl SolutionSilver<usize> for Day {
                 }
 
                 let num2_start = num1_start + num1_len + 1;
-                let Some(num2_len) = (&input
-                    [num2_start..(num2_start + MAX_NUM_LEN).min(input.len())])
+                let Some(num2_len) = input
+                    [num2_start..(num2_start + MAX_NUM_LEN).min(input.len())]
                     .iter()
                     .position(|&a| a == b')')
                 else {

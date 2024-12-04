@@ -47,7 +47,7 @@ impl SolutionGold<usize, usize> for Day {
                     .collect::<ArrayVec<[_; 8]>>();
 
                 (0..nums.len()).any(|skip| {
-                    let mut nums = nums.clone();
+                    let mut nums = nums;
                     nums.remove(skip);
 
                     let all_safe_inc = nums
