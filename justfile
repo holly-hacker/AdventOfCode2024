@@ -17,6 +17,16 @@ bench feature='default':
     cargo test --no-default-features --features {{feature}} -q
     cargo bench --bench criterion --no-default-features --features {{feature}}
 
+# Benchmarks a day using Criterion while setting a baseline
+bench-baseline feature='default':
+    cargo test --no-default-features --features {{feature}} -q
+    cargo bench --bench criterion --no-default-features --features {{feature}} -- --save-baseline {{feature}}
+
+# Benchmarks a day using Criterion against the stored baseline
+bench-against-baseline feature='default':
+    cargo test --no-default-features --features {{feature}} -q
+    cargo bench --bench criterion --no-default-features --features {{feature}} -- --baseline {{feature}}
+
 # Installs the tooling required for pgo
 install-pgo:
     rustup component add llvm-tools-preview
