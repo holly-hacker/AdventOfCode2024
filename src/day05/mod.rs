@@ -17,7 +17,9 @@ impl SolutionSilver<usize> for Day {
         let updates_slice = &input[(split_index + 2)..];
 
         // all numbers seem to be from 11 to 99 (inclusive)
-        let mut rules = [ArrayVec::<[u8; 24]>::new(); 99 - 11 + 1];
+        // this fits in a 128bit bitmap
+        const BUFFER_LEN: usize = 99 - 11 + 1;
+        let mut rules = [0u128; BUFFER_LEN];
 
         let rule_count = rules_slice.len() / 6;
         (0..rule_count).for_each(|rule_idx| {
@@ -25,7 +27,7 @@ impl SolutionSilver<usize> for Day {
                 (rules_slice[rule_idx * 6] - b'0') * 10 + rules_slice[rule_idx * 6 + 1] - b'0';
             let right =
                 (rules_slice[rule_idx * 6 + 3] - b'0') * 10 + rules_slice[rule_idx * 6 + 4] - b'0';
-            rules[left as usize - 11].push(right);
+            rules[left as usize - 11] |= 1 << right;
         });
 
         updates_slice
@@ -37,14 +39,13 @@ impl SolutionSilver<usize> for Day {
                     .collect::<ArrayVec<[u8; 23]>>()
             })
             .filter(|update| {
-                let mut seen = [false; 99 - 11 + 1];
+                let mut seen = 0u128;
                 (0..update.len()).all(|idx| {
                     let cur = update[idx];
-                    let rules = &rules[(cur - 11) as usize];
+                    let rules = rules[(cur - 11) as usize];
+                    let ok = rules & seen == 0;
 
-                    let ok = rules.is_empty() || rules.iter().all(|&r| !seen[r as usize - 11]);
-
-                    seen[cur as usize - 11] = true;
+                    seen |= 1 << cur;
 
                     ok
                 })
