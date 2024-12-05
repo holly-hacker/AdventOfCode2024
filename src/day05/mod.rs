@@ -1,4 +1,3 @@
-use tinyvec::ArrayVec;
 use utils::fast_parse_int;
 
 use super::*;
@@ -12,46 +11,74 @@ impl SolutionSilver<usize> for Day {
 
     fn calculate_silver(input: &str) -> usize {
         let input = input.as_bytes();
-        let split_index = memchr::memmem::find(input, b"\n\n").unwrap();
-        let rules_slice = &input[..split_index];
-        let updates_slice = &input[(split_index + 2)..];
 
         // all numbers seem to be from 11 to 99 (inclusive)
         // this fits in a 128bit bitmap
         const BUFFER_LEN: usize = 99 - 11 + 1;
         let mut rules = [0u128; BUFFER_LEN];
 
-        let rule_count = rules_slice.len() / 6;
-        (0..rule_count).for_each(|rule_idx| {
-            let left =
-                (rules_slice[rule_idx * 6] - b'0') * 10 + rules_slice[rule_idx * 6 + 1] - b'0';
-            let right =
-                (rules_slice[rule_idx * 6 + 3] - b'0') * 10 + rules_slice[rule_idx * 6 + 4] - b'0';
-            rules[left as usize - 11] |= 1 << right;
-        });
+        let mut index = 0;
+        loop {
+            let num1_1 = input[index];
+            if num1_1 == b'\n' {
+                break;
+            }
 
-        updates_slice
-            .split(|&b| b == b'\n')
-            .map(|line| {
-                let num_count = (line.len() + 1) / 3;
-                (0..num_count)
-                    .map(|num_i| (line[num_i * 3] - b'0') * 10 + line[num_i * 3 + 1] - b'0')
-                    .collect::<ArrayVec<[u8; 23]>>()
-            })
-            .filter(|update| {
-                let mut seen = 0u128;
-                (0..update.len()).all(|idx| {
-                    let cur = update[idx];
-                    let rules = rules[(cur - 11) as usize];
-                    let ok = rules & seen == 0;
+            let num1_1 = num1_1 - b'0';
+            let num1_2 = input[index + 1] - b'0';
+            let num2_1 = input[index + 3] - b'0';
+            let num2_2 = input[index + 4] - b'0';
 
-                    seen |= 1 << cur;
+            let num1 = (num1_1 * 10 + num1_2) as usize;
+            let num2 = (num2_1 * 10 + num2_2) as usize;
 
-                    ok
-                })
-            })
-            .map(|u| u[u.len() / 2] as usize)
-            .sum()
+            rules[num1 - 11] |= 1 << num2;
+            index += 6;
+        }
+
+        // skip empty line
+        index += 1;
+
+        let mut sum = 0;
+        while index < input.len() {
+            let mut seen = 0u128;
+            let start_index = index;
+            let ok = loop {
+                let num_1 = input[index] - b'0';
+                let num_2 = input[index + 1] - b'0';
+                let num = (num_1 * 10 + num_2) as usize;
+
+                let ok = rules[num - 11] & seen == 0;
+                index += 3;
+
+                if !ok {
+                    // loop until eol or eof, skipping the other numbers (they dont matter anymore)
+                    while index < input.len() && input[index - 1] != b'\n' {
+                        index += 3;
+                    }
+                    break false;
+                }
+
+                // mark as seen
+                seen |= 1 << num;
+
+                if index >= input.len() || input[index - 1] == b'\n' {
+                    break true;
+                }
+            };
+
+            if ok {
+                // find the middle number by checking the length of the line we processed
+                let len = index - start_index;
+                let count = len / 3;
+                let number_index = count / 2;
+                let byte_index = number_index * 3;
+                sum += (input[start_index + byte_index] - b'0') as usize * 10;
+                sum += (input[start_index + byte_index + 1] - b'0') as usize;
+            }
+        }
+
+        sum
     }
 }
 
