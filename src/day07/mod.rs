@@ -4,39 +4,40 @@ use super::*;
 
 pub struct Day;
 
-impl SolutionSilver<usize> for Day {
+impl SolutionSilver<u64> for Day {
     const DAY: u32 = 7;
     const INPUT_SAMPLE: &'static str = include_str!("input_sample.txt");
     const INPUT_REAL: &'static str = include_str!("input_real.txt");
 
-    fn calculate_silver(input: &str) -> usize {
+    fn calculate_silver(input: &str) -> u64 {
         input
             .lines()
             .map(|line| {
                 let (out, rest) = line.split_once(':').unwrap();
-                let out = fast_parse_int(out);
+                let expected_result = fast_parse_int(out) as u64;
                 let rest = rest
                     .trim()
                     .split(" ")
                     .map(fast_parse_int)
+                    .map(|a| a as u64)
                     .collect::<Vec<_>>();
 
                 for i in 0..(1 << (rest.len())) {
                     let mut i = i;
-                    let mut test_output = 0;
+                    let mut current_result = 0;
                     for num in &rest {
                         let operation = i & 1;
                         i >>= 1;
 
                         if operation == 0 {
-                            test_output += num;
+                            current_result += num;
                         } else {
-                            test_output *= num;
+                            current_result *= num;
                         }
                     }
 
-                    if test_output == out {
-                        return out;
+                    if current_result == expected_result {
+                        return expected_result;
                     }
                 }
                 0
@@ -45,37 +46,48 @@ impl SolutionSilver<usize> for Day {
     }
 }
 
-impl SolutionGold<usize, usize> for Day {
+impl SolutionGold<u64, u64> for Day {
     const INPUT_SAMPLE_GOLD: &'static str = include_str!("input_sample_gold.txt");
 
-    fn calculate_gold(input: &str) -> usize {
+    fn calculate_gold(input: &str) -> u64 {
         input
             .lines()
             .map(|line| {
                 let (out, rest) = line.split_once(':').unwrap();
-                let out = fast_parse_int(out);
+                let expected_result = fast_parse_int(out) as u64;
                 let rest = rest
                     .trim()
                     .split(" ")
                     .map(fast_parse_int)
+                    .map(|a| a as u64)
                     .collect::<Vec<_>>();
 
                 for i in 0..(3usize.pow(rest.len() as u32)) {
                     let mut i = i;
-                    let mut test_output = 0;
-                    for num in &rest {
+                    let mut current_result = 0u64;
+                    for &num in &rest {
+                        // if number is already too large, we won't get the expected result with future operations
+                        if current_result >= expected_result {
+                            break;
+                        }
+
                         let operation = i % 3;
                         i /= 3;
 
                         match operation {
-                            1 => test_output += num,
-                            2 => test_output *= num,
-                            _ => test_output = fast_parse_int(&format!("{test_output}{num}")),
+                            0 => current_result *= num,
+                            1 => current_result += num,
+                            // assume that the first number is never 0, as the exercise does not define it
+                            2 if current_result == 0 => break,
+                            2 => {
+                                current_result = 10u64.pow(num.ilog10() + 1) * current_result + num;
+                            }
+                            _ => unreachable!(),
                         }
                     }
 
-                    if test_output == out {
-                        return out;
+                    if current_result == expected_result {
+                        return expected_result;
                     }
                 }
                 0
