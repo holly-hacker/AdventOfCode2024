@@ -19,16 +19,13 @@ impl SolutionSilver<usize> for Day {
             .iter()
             .filter(|&&b| b != b'.' && b != b'\n')
             .copied()
-            .collect::<HashSet<_>>();
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
 
-        let mut overlaps = HashSet::<(isize, isize)>::new();
+        let mut overlaps = vec![false; width * height];
         for chr in antenna_names {
-            let positions = input
-                .iter()
-                .enumerate()
-                .filter(|(_, &b)| b == chr)
-                .map(|(i, _)| i)
-                .collect::<Vec<_>>();
+            let positions = memchr::memchr_iter(chr, input).collect::<Vec<_>>();
 
             // pick any 2 positions
             for i in 0..positions.len() {
@@ -52,18 +49,18 @@ impl SolutionSilver<usize> for Day {
                     if (anti_freq1_x >= 0 && anti_freq1_x < width as isize)
                         && (anti_freq1_y >= 0 && anti_freq1_y < height as isize)
                     {
-                        overlaps.insert((anti_freq1_x, anti_freq1_y));
+                        overlaps[anti_freq1_x as usize + anti_freq1_y as usize * width] = true;
                     }
                     if (anti_freq2_x >= 0 && anti_freq2_x < width as isize)
                         && (anti_freq2_y >= 0 && anti_freq2_y < height as isize)
                     {
-                        overlaps.insert((anti_freq2_x, anti_freq2_y));
+                        overlaps[anti_freq2_x as usize + anti_freq2_y as usize * width] = true;
                     }
                 }
             }
         }
 
-        overlaps.len()
+        overlaps.into_iter().filter(|&x| x).count()
     }
 }
 
@@ -82,14 +79,9 @@ impl SolutionGold<usize, usize> for Day {
             .copied()
             .collect::<HashSet<_>>();
 
-        let mut overlaps = HashSet::<(isize, isize)>::new();
+        let mut overlaps = vec![false; width * height];
         for chr in antenna_names {
-            let positions = input
-                .iter()
-                .enumerate()
-                .filter(|(_, &b)| b == chr)
-                .map(|(i, _)| i)
-                .collect::<Vec<_>>();
+            let positions = memchr::memchr_iter(chr, input).collect::<Vec<_>>();
 
             // pick any 2 positions
             for i in 0..positions.len() {
@@ -114,13 +106,13 @@ impl SolutionGold<usize, usize> for Day {
                         if (anti_freq1_x >= 0 && anti_freq1_x < width as isize)
                             && (anti_freq1_y >= 0 && anti_freq1_y < height as isize)
                         {
-                            overlaps.insert((anti_freq1_x, anti_freq1_y));
+                            overlaps[anti_freq1_x as usize + anti_freq1_y as usize * width] = true;
                             any_insert = true;
                         }
                         if (anti_freq2_x >= 0 && anti_freq2_x < width as isize)
                             && (anti_freq2_y >= 0 && anti_freq2_y < height as isize)
                         {
-                            overlaps.insert((anti_freq2_x, anti_freq2_y));
+                            overlaps[anti_freq2_x as usize + anti_freq2_y as usize * width] = true;
                             any_insert = true;
                         }
 
@@ -133,7 +125,7 @@ impl SolutionGold<usize, usize> for Day {
             }
         }
 
-        overlaps.len()
+        overlaps.into_iter().filter(|&x| x).count()
     }
 }
 
