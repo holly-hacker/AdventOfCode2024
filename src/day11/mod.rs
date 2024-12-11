@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use utils::{fast_parse_int, fast_parse_int_from_bytes};
+use fnv::FnvBuildHasher;
+use utils::fast_parse_int;
 
 use super::*;
 
@@ -12,30 +13,13 @@ impl SolutionSilver<usize> for Day {
     const INPUT_REAL: &'static str = include_str!("input_real.txt");
 
     fn calculate_silver(input: &str) -> usize {
-        let mut nums = input.split(' ').map(fast_parse_int).collect::<Vec<_>>();
+        let mut memoize = HashMap::<_, _, FnvBuildHasher>::default();
 
-        for _ in 0..25 {
-            nums = nums
-                .into_iter()
-                .flat_map(|num| {
-                    let digit_count = num.to_string().len();
-                    match num {
-                        0 => vec![1],
-                        _ if digit_count % 2 == 0 => vec![
-                            fast_parse_int_from_bytes(
-                                &num.to_string().as_bytes()[digit_count / 2..],
-                            ),
-                            fast_parse_int_from_bytes(
-                                &num.to_string().as_bytes()[..digit_count / 2],
-                            ),
-                        ],
-                        _ => vec![num * 2024],
-                    }
-                })
-                .collect();
-        }
-
-        nums.len()
+        input
+            .split(' ')
+            .map(fast_parse_int)
+            .map(|num| resolve_number(num as u64, 25, &mut memoize))
+            .sum()
     }
 }
 
@@ -43,17 +27,21 @@ impl SolutionGold<usize, usize> for Day {
     const INPUT_SAMPLE_GOLD: &'static str = include_str!("input_sample_gold.txt");
 
     fn calculate_gold(input: &str) -> usize {
-        let nums = input.split(' ').map(fast_parse_int).collect::<Vec<_>>();
+        let mut memoize = HashMap::<_, _, FnvBuildHasher>::default();
 
-        let mut memoize = HashMap::new();
-
-        nums.into_iter()
-            .map(|num| resolve_number(num, 75, &mut memoize))
+        input
+            .split(' ')
+            .map(fast_parse_int)
+            .map(|num| resolve_number(num as u64, 75, &mut memoize))
             .sum()
     }
 }
 
-fn resolve_number(num: usize, depth: usize, memoize: &mut HashMap<(usize, usize), usize>) -> usize {
+fn resolve_number(
+    num: u64,
+    depth: u8,
+    memoize: &mut HashMap<(u64, u8), usize, FnvBuildHasher>,
+) -> usize {
     if depth == 0 {
         return 1;
     }
@@ -76,13 +64,14 @@ fn resolve_number(num: usize, depth: usize, memoize: &mut HashMap<(usize, usize)
     }
 
     let half = digit_count / 2;
-    let left_half = num / 10usize.pow(half);
-    let right_half = num % 10usize.pow(half);
+    let half_splitoff = 10u64.pow(half);
+    let left_half = num / half_splitoff;
+    let right_half = num % half_splitoff;
 
-    let res1 = resolve_number(left_half, depth - 1, memoize);
-    let res2 = resolve_number(right_half, depth - 1, memoize);
-    memoize.insert((num, depth), res1 + res2);
-    res1 + res2
+    let res = resolve_number(left_half, depth - 1, memoize)
+        + resolve_number(right_half, depth - 1, memoize);
+    memoize.insert((num, depth), res);
+    res
 }
 
 #[test]
