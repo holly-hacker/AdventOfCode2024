@@ -18,7 +18,7 @@ impl SolutionSilver<usize> for Day {
         input
             .split(' ')
             .map(fast_parse_int)
-            .map(|num| resolve_number(num as u64, 25, &mut memoize))
+            .map(|num| resolve_number::<25>(num as u64, 25, &mut memoize))
             .sum()
     }
 }
@@ -32,34 +32,38 @@ impl SolutionGold<usize, usize> for Day {
         input
             .split(' ')
             .map(fast_parse_int)
-            .map(|num| resolve_number(num as u64, 75, &mut memoize))
+            .map(|num| resolve_number::<75>(num as u64, 75, &mut memoize))
             .sum()
     }
 }
 
-fn resolve_number(
+fn resolve_number<const N: usize>(
     num: u64,
     depth: u8,
-    memoize: &mut HashMap<(u64, u8), usize, FnvBuildHasher>,
+    memoize: &mut HashMap<u64, [usize; N], FnvBuildHasher>,
 ) -> usize {
     if depth == 0 {
         return 1;
     }
 
-    if let Some(val) = memoize.get(&(num, depth)) {
-        return *val;
+    if let Some(val) = memoize.get(&num) {
+        let cached = val[N - depth as usize];
+        // this function should never return 0
+        if cached != 0 {
+            return cached;
+        }
     }
 
     if num == 0 {
         let res = resolve_number(1, depth - 1, memoize);
-        memoize.insert((num, depth), res);
+        memoize.entry(num).or_insert([0; N])[N - depth as usize] = res;
         return res;
     }
 
     let digit_count = num.ilog10() + 1;
     if digit_count % 2 != 0 {
         let res = resolve_number(num * 2024, depth - 1, memoize);
-        memoize.insert((num, depth), res);
+        memoize.entry(num).or_insert([0; N])[N - depth as usize] = res;
         return res;
     }
 
@@ -70,7 +74,7 @@ fn resolve_number(
 
     let res = resolve_number(left_half, depth - 1, memoize)
         + resolve_number(right_half, depth - 1, memoize);
-    memoize.insert((num, depth), res);
+    memoize.entry(num).or_insert([0; N])[N - depth as usize] = res;
     res
 }
 
