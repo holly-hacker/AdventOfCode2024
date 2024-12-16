@@ -2,8 +2,9 @@ use std::{
     cmp::Ordering,
     collections::{BinaryHeap, HashMap, HashSet},
     rc::Rc,
-    usize,
 };
+
+use fnv::FnvBuildHasher;
 
 use super::*;
 
@@ -36,7 +37,6 @@ impl SolutionSilver<usize> for Day {
         history.insert((start_pos, start_dir));
 
         while let Some(cur) = pq.pop() {
-            // dbg!(&cur);
             // check if valid
             if cur.pos == end_pos {
                 return cur.score;
@@ -113,7 +113,7 @@ impl SolutionGold<usize, usize> for Day {
         let end_x = end_pos % stride;
         let end_y = end_pos / stride;
 
-        let start_dir = (1isize, 0);
+        let start_dir = (1i8, 0i8);
 
         let mut pq = BinaryHeap::<MazeEntryGold>::new();
 
@@ -122,11 +122,11 @@ impl SolutionGold<usize, usize> for Day {
             dir: start_dir,
             cost: 0,
             distance_to_end: end_x.abs_diff(start_x) + end_y.abs_diff(start_y),
-            visited: LinkedListNode::new((start_pos, start_dir)),
+            visited: LinkedListNode::new((start_pos as u16, start_dir)),
         });
 
-        let mut global_cache = HashMap::<(usize, (isize, isize)), usize>::new();
-        global_cache.insert((start_pos, (start_dir)), 0);
+        let mut global_cache = HashMap::<(u16, (i8, i8)), usize, FnvBuildHasher>::default();
+        global_cache.insert((start_pos as u16, start_dir), 0);
 
         let mut best_score: Option<usize> = None;
         let mut positions_in_best_paths = HashSet::new();
@@ -144,31 +144,23 @@ impl SolutionGold<usize, usize> for Day {
                     if cur.cost < best_score_u {
                         best_score = None;
                         positions_in_best_paths.clear();
-                        // panic!();
                     }
                 }
 
-                // dbg!(&cur);
-                // println!("found end: {}", cur.cost);
                 if best_score.is_none() {
                     best_score = Some(cur.cost);
                 }
 
-                let mut cur = &cur.visited;
-                while let Some(prev) = &cur.previous {
-                    positions_in_best_paths.insert(cur.current.0);
-                    cur = prev.as_ref();
-                }
-                positions_in_best_paths.insert(cur.current.0);
+                positions_in_best_paths.extend(cur.visited.iter().map(|(a, _)| a));
                 continue;
             }
 
             // go forward, if possible
-            let next_pos = ((cur.pos.1 as isize + cur.dir.1) * stride as isize
-                + (cur.pos.0 as isize + cur.dir.0)) as usize;
-            if grid[next_pos] != b'#' && !cur.visited.contains(&(next_pos, cur.dir)) {
+            let next_pos = ((cur.pos.1 as isize + cur.dir.1 as isize) * stride as isize
+                + (cur.pos.0 as isize + cur.dir.0 as isize)) as usize;
+            if grid[next_pos] != b'#' {
                 let entry = global_cache
-                    .entry((next_pos, cur.dir))
+                    .entry((next_pos as u16, cur.dir))
                     .or_insert(usize::MAX);
                 if *entry < cur.cost + 1 {
                     continue;
@@ -183,7 +175,7 @@ impl SolutionGold<usize, usize> for Day {
                     dir: cur.dir,
                     cost: cur.cost + 1,
                     distance_to_end: next_pos_x.abs_diff(end_x) + next_pos_y.abs_diff(end_y),
-                    visited: cur.visited.clone().with_next((next_pos, cur.dir)),
+                    visited: cur.visited.clone().with_next((next_pos as u16, cur.dir)),
                 });
             }
 
@@ -197,15 +189,35 @@ impl SolutionGold<usize, usize> for Day {
             };
             let cur_pos = cur.pos.1 * stride + cur.pos.0;
             for new_dir in new_dirs {
-                if cur.visited.contains(&(cur_pos, new_dir)) {
+                let probe_pos = (cur_pos as isize
+                    + new_dir.1 as isize * stride as isize
+                    + new_dir.0 as isize) as usize;
+                let probe_pos_x = probe_pos % stride;
+                let probe_pos_y = probe_pos / stride;
+
+                if grid[probe_pos] == b'#' {
                     continue;
                 }
+
+                let entry = global_cache
+                    .entry((probe_pos as u16, new_dir))
+                    .or_insert(usize::MAX);
+                if *entry < cur.cost + 1001 {
+                    continue;
+                }
+
+                *entry = cur.cost + 1001;
+
                 pq.push(MazeEntryGold {
-                    pos: cur.pos,
+                    pos: (probe_pos_x, probe_pos_y),
                     dir: new_dir,
-                    cost: cur.cost + 1000,
+                    cost: cur.cost + 1001,
                     distance_to_end: cur.distance_to_end,
-                    visited: cur.visited.clone(),
+                    visited: cur
+                        .visited
+                        .clone()
+                        .with_next((cur_pos as u16, new_dir))
+                        .with_next((probe_pos as u16, new_dir)),
                 });
             }
         }
@@ -217,10 +229,10 @@ impl SolutionGold<usize, usize> for Day {
 #[derive(Debug, Eq, PartialEq)]
 struct MazeEntryGold {
     pos: (usize, usize),
-    dir: (isize, isize),
+    dir: (i8, i8),
     cost: usize,
     distance_to_end: usize,
-    visited: LinkedListNode<(usize, (isize, isize))>,
+    visited: LinkedListNode<(u16, (i8, i8))>,
 }
 
 impl PartialOrd for MazeEntryGold {
@@ -268,30 +280,6 @@ impl<T> LinkedListNode<T> {
         LinkedListIterator {
             node: Some(Rc::new(self.clone())),
         }
-    }
-
-    pub fn len(&self) -> usize {
-        let mut len = 1;
-        let mut cur = self;
-        while let Some(prev) = &cur.previous {
-            len += 1;
-            cur = prev;
-        }
-        len
-    }
-
-    pub fn contains(&self, value: &T) -> bool
-    where
-        T: PartialEq,
-    {
-        let mut cur = self;
-        while let Some(prev) = &cur.previous {
-            if &cur.current == value {
-                return true;
-            }
-            cur = prev;
-        }
-        false
     }
 }
 
