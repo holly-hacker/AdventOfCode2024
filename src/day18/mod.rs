@@ -27,17 +27,13 @@ impl SolutionSilver<usize> for Day {
             dist: 0,
         });
 
-        let mut blocks = HashSet::<(usize, usize)>::new();
-        input
-            .lines()
-            .map(|line| line.split_once(',').unwrap())
-            .map(|(a, b)| (fast_parse_int(a), fast_parse_int(b)))
+        let blocks = nums
+            .iter()
             .take(if nums.len() > 100 { 1024 } else { 12 })
-            .for_each(|(x, y)| {
-                blocks.insert((x, y));
-            });
+            .map(|(x, y)| (*x as u8, *y as u8))
+            .collect::<HashSet<(u8, u8)>>();
 
-        let mut visited = HashMap::new();
+        let mut visited = HashMap::<(u8, u8), usize, _>::new();
 
         while let Some(next) = pq.pop() {
             if next.pos == end_pos {
@@ -95,7 +91,7 @@ impl SolutionSilver<usize> for Day {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Node {
-    pos: (usize, usize),
+    pos: (u8, u8),
     dist: usize,
 }
 
@@ -127,25 +123,22 @@ impl SolutionGold<usize, String> for Day {
 
         let start_pos = (0, 0);
         let end_pos = if nums.len() > 100 { (70, 70) } else { (6, 6) };
+        let start_i = if nums.len() > 100 { 1024 } else { 12 };
 
-        for i in 0..nums.len() {
+        for i in start_i..nums.len() {
             let mut pq = std::collections::BinaryHeap::<Node>::new();
             pq.push(Node {
                 pos: start_pos,
                 dist: 0,
             });
 
-            let mut blocks = HashSet::<(usize, usize)>::new();
-            input
-                .lines()
-                .map(|line| line.split_once(',').unwrap())
-                .map(|(a, b)| (fast_parse_int(a), fast_parse_int(b)))
+            let blocks = nums
+                .iter()
                 .take(i)
-                .for_each(|(x, y)| {
-                    blocks.insert((x, y));
-                });
+                .map(|(x, y)| (*x as u8, *y as u8))
+                .collect::<HashSet<(u8, u8)>>();
 
-            let mut visited = HashMap::new();
+            let mut visited = HashMap::<(u8, u8), usize, _>::new();
 
             let mut found_exit = false;
             while let Some(next) = pq.pop() {
