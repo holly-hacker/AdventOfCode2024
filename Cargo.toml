@@ -10,6 +10,7 @@ fnv = "1.0.7"
 memchr = "2.7.4"
 paste = "1"
 regex = { version = "1.11.1", default-features = false, features = ["std", "perf"] }
+rustc-hash = "2.1.0"
 tinyvec = { version = "1.8.0", features = ["alloc"] }
 
 [dev-dependencies]

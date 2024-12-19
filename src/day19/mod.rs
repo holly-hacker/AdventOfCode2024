@@ -13,15 +13,13 @@ impl SolutionSilver<usize> for Day {
         let (patterns, designs) = input.split_once("\n\n").unwrap();
 
         let mut patterns = patterns.split(", ").collect::<Vec<_>>();
-        let designs = designs.lines().collect::<Vec<_>>();
 
-        patterns.sort_by_key(|p| std::cmp::Reverse(p.len()));
-        patterns.reverse();
+        patterns.sort_by_key(|p| p.len());
 
-        let mut history = HashMap::new();
+        let mut history = HashMap::<_, _, rustc_hash::FxBuildHasher>::default();
 
         designs
-            .iter()
+            .lines()
             .filter(|design| check_can_be_made(design, &patterns, &mut history))
             .count()
     }
@@ -30,7 +28,7 @@ impl SolutionSilver<usize> for Day {
 fn check_can_be_made<'a>(
     design: &'a str,
     patterns: &[&str],
-    history: &mut HashMap<&'a str, bool>,
+    history: &mut HashMap<&'a str, bool, rustc_hash::FxBuildHasher>,
 ) -> bool {
     if design.is_empty() {
         return true;
@@ -40,6 +38,7 @@ fn check_can_be_made<'a>(
         return *success;
     }
 
+    let mut success = false;
     for &pattern in patterns {
         if pattern.len() > design.len() {
             continue;
@@ -49,16 +48,15 @@ fn check_can_be_made<'a>(
             continue;
         }
 
-        let success = check_can_be_made(&design[pattern.len()..], patterns, history);
-
-        history.insert(design, success);
-
-        if success {
-            return true;
+        if check_can_be_made(&design[pattern.len()..], patterns, history) {
+            success = true;
+            break;
         }
     }
 
-    false
+    history.insert(design, success);
+
+    success
 }
 
 impl SolutionGold<usize, usize> for Day {
@@ -67,16 +65,12 @@ impl SolutionGold<usize, usize> for Day {
     fn calculate_gold(input: &str) -> usize {
         let (patterns, designs) = input.split_once("\n\n").unwrap();
 
-        let mut patterns = patterns.split(", ").collect::<Vec<_>>();
-        let designs = designs.lines().collect::<Vec<_>>();
+        let patterns = patterns.split(", ").collect::<Vec<_>>();
 
-        patterns.sort_by_key(|p| std::cmp::Reverse(p.len()));
-        patterns.reverse();
-
-        let mut history = HashMap::new();
+        let mut history = HashMap::<_, _, rustc_hash::FxBuildHasher>::default();
 
         designs
-            .iter()
+            .lines()
             .map(|design| check_can_be_made_gold(design, &patterns, &mut history))
             .sum()
     }
@@ -85,7 +79,7 @@ impl SolutionGold<usize, usize> for Day {
 fn check_can_be_made_gold<'a>(
     design: &'a str,
     patterns: &[&str],
-    history: &mut HashMap<&'a str, usize>,
+    history: &mut HashMap<&'a str, usize, rustc_hash::FxBuildHasher>,
 ) -> usize {
     if design.is_empty() {
         return 1;
