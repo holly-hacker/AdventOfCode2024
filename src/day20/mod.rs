@@ -17,11 +17,12 @@ impl SolutionSilver<usize> for Day {
         let end_pos = grid.iter().position(|&c| c == b'E').unwrap();
 
         // walk through the track and get all positions
+        let mut path_lookup = vec![0; grid.len()];
         let mut path = Vec::new();
         path.push(start_pos);
         let mut current_pos = start_pos;
         let mut prev_pos = start_pos;
-        loop {
+        for i in 1.. {
             if current_pos == end_pos {
                 break;
             }
@@ -32,12 +33,11 @@ impl SolutionSilver<usize> for Day {
                     prev_pos = current_pos;
                     current_pos = next_pos;
                     path.push(current_pos);
+                    path_lookup[current_pos] = i;
                     break;
                 }
             }
         }
-
-        // dbg!(path.len());
 
         // loop over possible cheat positions
         let mut good_count = 0;
@@ -63,17 +63,19 @@ impl SolutionSilver<usize> for Day {
                 let next_pos_1 = (pos as isize + offset) as usize;
                 let next_pos_2 = (pos as isize + offset * 2) as usize;
 
-                if grid[next_pos_1] == b'#' && grid[next_pos_2] != b'#' {
-                    let next_i = path.iter().position(|&p| p == next_pos_2).unwrap();
+                if !(grid[next_pos_1] == b'#' && grid[next_pos_2] != b'#') {
+                    continue;
+                }
+                let next_i = path_lookup[next_pos_2];
 
-                    if next_i > i {
-                        let skipped = (next_i - i) - 2;
-                        // println!("Skipping from {i} ({pos}) to {next_i} ({next_pos_2}), skipping {skipped}");
+                if next_i <= i {
+                    continue;
+                }
 
-                        if skipped >= 100 {
-                            good_count += 1;
-                        }
-                    }
+                let skipped = (next_i - i) - 2;
+
+                if skipped >= 100 {
+                    good_count += 1;
                 }
             }
         }
@@ -93,15 +95,14 @@ impl SolutionGold<usize, usize> for Day {
 
         let start_pos = grid.iter().position(|&c| c == b'S').unwrap();
         let end_pos = grid.iter().position(|&c| c == b'E').unwrap();
-        let end_pos_x = (end_pos % stride) as isize;
-        let end_pos_y = (end_pos / stride) as isize;
 
         // walk through the track and get all positions
+        let mut path_lookup = vec![0u32; grid.len()];
         let mut path = Vec::new();
         path.push(start_pos);
         let mut current_pos = start_pos;
         let mut prev_pos = start_pos;
-        loop {
+        for i in 1.. {
             if current_pos == end_pos {
                 break;
             }
@@ -112,12 +113,11 @@ impl SolutionGold<usize, usize> for Day {
                     prev_pos = current_pos;
                     current_pos = next_pos;
                     path.push(current_pos);
+                    path_lookup[current_pos] = i;
                     break;
                 }
             }
         }
-
-        // dbg!(path.len());
 
         // loop over possible cheat positions
         let mut good_count = 0;
@@ -126,61 +126,32 @@ impl SolutionGold<usize, usize> for Day {
             let pos_x = (pos % stride) as isize;
             let pos_y = (pos / stride) as isize;
 
-            // find all grid positions with a manhattan distance of 6 or less
-
+            // find all grid positions with a manhattan distance of 20 or less
             for offs_y in -20isize..=20 {
                 let new_y = pos_y + offs_y;
                 if new_y < 0 || new_y >= height as isize {
                     continue;
                 }
 
-                for offs_x in -20isize..=20 {
+                let max_x_offs = 20 - offs_y.abs();
+                for offs_x in -max_x_offs..=max_x_offs {
                     let new_x = pos_x + offs_x;
                     if new_x < 0 || new_x >= width as isize {
                         continue;
                     }
 
-                    // a bit subobtimal, but whatever
-                    let manhattan_dist = (offs_x.abs() + offs_y.abs()) as usize;
-                    if manhattan_dist > 20 || manhattan_dist <= 1 {
-                        continue;
-                    }
-
+                    // check if target position is next on the path
                     let new_pos = (new_x + new_y * stride as isize) as usize;
-
-                    // don't teleport into a wall
-                    if grid[new_pos] == b'#' {
+                    let next_i = path_lookup[new_pos] as usize;
+                    if next_i <= i {
                         continue;
                     }
 
-                    // IDEA: don't count cheats that walk over the finish
-                    // seems to be incorrect in the problem statement?
-                    if false {
-                        let dist_end_x = end_pos_x - pos_x;
-                        let dist_end_y = end_pos_y - pos_y;
-                        if dist_end_x == 0 {
-                            // same y value
-                            if dist_end_y.signum() == offs_y.signum()
-                                && dist_end_y.unsigned_abs() < manhattan_dist
-                            {
-                                continue;
-                            }
-                        }
-
-                        if dist_end_y == 0 {
-                            // same x value
-                            if dist_end_x.signum() == offs_x.signum()
-                                && dist_end_x.unsigned_abs() < manhattan_dist
-                            {
-                                continue;
-                            }
-                        }
-                    }
-
-                    let next_i = path.iter().position(|&p| p == new_pos).unwrap();
-                    if next_i <= i || next_i - i <= manhattan_dist {
+                    let manhattan_dist = (offs_x.abs() + offs_y.abs()) as usize;
+                    if next_i - i <= manhattan_dist {
                         continue;
                     }
+
                     let skipped = (next_i - i) - manhattan_dist;
 
                     debug_assert!(skipped % 2 == 0);
@@ -192,7 +163,6 @@ impl SolutionGold<usize, usize> for Day {
             }
         }
 
-        // todo!();
         good_count
     }
 }
@@ -212,14 +182,11 @@ fn test_silver_real() {
 #[test]
 fn test_gold_sample() {
     let output = Day::calculate_gold(Day::INPUT_SAMPLE_GOLD);
-    assert_eq!(16, output);
+    assert_eq!(0, output);
 }
 
 #[test]
 fn test_gold_real() {
     let output = Day::calculate_gold(Day::INPUT_REAL);
-    // not 35300
-    // not 968652
-    // not 977937 (checked twice)
-    assert_eq!(712058625427487, output);
+    assert_eq!(982124, output);
 }
