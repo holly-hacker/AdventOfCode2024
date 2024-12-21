@@ -1,5 +1,6 @@
 use std::{collections::HashMap, iter};
 
+use fnv::FnvBuildHasher;
 use utils::fast_parse_int;
 
 use super::*;
@@ -12,7 +13,7 @@ impl SolutionSilver<usize> for Day {
     const INPUT_REAL: &'static str = include_str!("input_real.txt");
 
     fn calculate_silver(input: &str) -> usize {
-        let mut cache = HashMap::new();
+        let mut cache = HashMap::<_, _, FnvBuildHasher>::default();
         input
             .lines()
             .map(|line| {
@@ -36,7 +37,7 @@ impl SolutionGold<usize, usize> for Day {
     const INPUT_SAMPLE_GOLD: &'static str = include_str!("input_sample_gold.txt");
 
     fn calculate_gold(input: &str) -> usize {
-        let mut cache = HashMap::new();
+        let mut cache = HashMap::<_, _, FnvBuildHasher>::default();
         input
             .lines()
             .map(|line| {
@@ -61,7 +62,7 @@ fn get_moves(
     target: char,
     depth: usize,
     max_depth: usize,
-    memoization: &mut HashMap<((isize, isize, bool), usize), usize>,
+    memoization: &mut HashMap<((i8, i8, bool), u8), usize, FnvBuildHasher>,
 ) -> usize {
     let start_pos = get_position(start_char, depth);
     let end_pos = get_position(target, depth);
@@ -84,49 +85,41 @@ fn get_moves(
     let x_first = match (x_must_first, y_must_first) {
         (true, false) => true,
         (false, true) => false,
-        (false, false) => match (diff_x.signum(), diff_y.signum()) {
-            // moving to the left is expensive, prefer doing those first so they get done in one go
-            // in order of preference: left, down, up, right
-            (-1, _) => true,  // left first
-            (_, 1) => false,  // then down
-            (_, -1) => false, // then up
-            // (1, _) => false,  // then right (though it doesn't matter)
-            // (0, 0) => true,   // doesn't matter
-            // d => unreachable!("Invalid diff: {d:?}"),
-            _ => false,
-        },
-        // (false, false) => &[false],
-        (true, true) => unreachable!("Both x and y must go first"),
-    };
-
-    if let Some(&moves) = memoization.get(&((diff_x, diff_y, x_first), depth)) {
-        return moves;
-    }
-
-    let x_moves = iter::repeat_n(if diff_x < 0 { '<' } else { '>' }, diff_x.unsigned_abs())
-        .collect::<String>();
-    let y_moves = iter::repeat_n(if diff_y < 0 { '^' } else { 'v' }, diff_y.unsigned_abs())
-        .collect::<String>();
-    let all_moves = if x_first {
-        x_moves + &y_moves + "A"
-    } else {
-        y_moves + &x_moves + "A"
+        // moving to the left is expensive, prefer doing those first so they get done in one go
+        // in order of preference: left, down, up, right
+        // due to the layout of the keypad, down/up have the same result of `x_first == false`, so this check can be simplified
+        _ => diff_x.signum() == -1,
     };
 
     if depth == max_depth {
-        return all_moves.len();
+        return diff_x.unsigned_abs() + diff_y.unsigned_abs() + 1;
     }
+
+    if let Some(&moves) = memoization.get(&((diff_x as i8, diff_y as i8, x_first), depth as u8)) {
+        return moves;
+    }
+
+    let x_moves = iter::repeat_n(if diff_x < 0 { '<' } else { '>' }, diff_x.unsigned_abs());
+    let y_moves = iter::repeat_n(if diff_y < 0 { '^' } else { 'v' }, diff_y.unsigned_abs());
+    let all_moves = if x_first {
+        x_moves.chain(y_moves).chain(iter::once('A'))
+    } else {
+        y_moves.chain(x_moves).chain(iter::once('A'))
+    };
 
     let mut total_len = 0;
     let mut current_char = 'A';
-    for chr in all_moves.chars() {
+    for chr in all_moves {
         let move_len = get_moves(current_char, chr, depth + 1, max_depth, memoization);
         total_len += move_len;
 
         current_char = chr;
     }
 
-    memoization.insert(((diff_x, diff_y, x_first), depth), total_len);
+    memoization.insert(
+        ((diff_x as i8, diff_y as i8, x_first), depth as u8),
+        total_len,
+    );
 
     total_len
 }
