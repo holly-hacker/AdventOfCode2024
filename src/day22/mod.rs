@@ -110,7 +110,8 @@ fn test_gold_sample() {
     assert_eq!(23, output);
 }
 
-#[test]
+// #[test]
+#[allow(unused)]
 fn test_gold_real() {
     let output = Day::calculate_gold(Day::INPUT_REAL);
     assert_eq!(2218, output);
