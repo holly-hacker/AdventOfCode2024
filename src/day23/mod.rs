@@ -1,7 +1,9 @@
 use core::str;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 
+use fnv::FnvBuildHasher;
 use petgraph::graph::NodeIndex;
+use tinyvec::TinyVec;
 
 use super::*;
 
@@ -13,11 +15,13 @@ impl SolutionSilver<usize> for Day {
     const INPUT_REAL: &'static str = include_str!("input_real.txt");
 
     fn calculate_silver(input: &str) -> usize {
-        let mut graph = petgraph::Graph::<u16, (), _, _>::new_undirected();
-        let mut node_lookup = HashMap::new();
-        input.lines().for_each(|l| {
-            let n1 = u16::from_ne_bytes(l.as_bytes()[0..=1].try_into().unwrap());
-            let n2 = u16::from_ne_bytes(l.as_bytes()[3..=4].try_into().unwrap());
+        let mut graph = petgraph::graph::UnGraph::<u16, ()>::new_undirected();
+        let mut node_lookup = HashMap::<_, _, FnvBuildHasher>::default();
+        let input = input.as_bytes();
+        let line_count = (input.len() + 1) / 6;
+        (0..line_count).for_each(|i| {
+            let n1 = u16::from_ne_bytes(input[i * 6..][..2].try_into().unwrap());
+            let n2 = u16::from_ne_bytes(input[i * 6 + 3..][..2].try_into().unwrap());
 
             let node1_key = *node_lookup.entry(n1).or_insert_with(|| graph.add_node(n1));
             let node2_key = *node_lookup.entry(n2).or_insert_with(|| graph.add_node(n2));
@@ -27,37 +31,31 @@ impl SolutionSilver<usize> for Day {
 
         graph
             .node_indices()
-            .filter(|n| graph.neighbors_undirected(*n).count() >= 2)
-            .flat_map(|n| {
-                let all_neighbours = graph.neighbors_undirected(n).collect::<Vec<_>>();
-                let all_neighbours = &all_neighbours;
+            .map(|n| {
+                let all_neighbours = &graph
+                    .neighbors_undirected(n)
+                    .filter(|&neighbour| neighbour.index() > n.index())
+                    .collect::<TinyVec<[_; 16]>>();
+
+                if all_neighbours.len() < 2 {
+                    return 0;
+                }
+
+                let start_is_t = u16::to_ne_bytes(*graph.node_weight(n).unwrap())[0] == b't';
 
                 // get all combinations of 2
                 (0..all_neighbours.len())
-                    .flat_map(move |i| (1..all_neighbours.len()).map(move |j| (i, j)))
-                    .map(|(i, j)| [all_neighbours[i], all_neighbours[j], n])
-                    .filter(|a| a[0] != a[1])
+                    .flat_map(move |i| (i..all_neighbours.len()).map(move |j| (i, j)))
+                    .map(|(i, j)| [n, all_neighbours[i], all_neighbours[j]])
                     .filter(|a| {
-                        graph.contains_edge(a[0], a[1])
-                            && graph.contains_edge(a[0], a[2])
-                            && graph.contains_edge(a[1], a[2])
+                        start_is_t
+                            || u16::to_ne_bytes(*graph.node_weight(a[1]).unwrap())[0] == b't'
+                            || u16::to_ne_bytes(*graph.node_weight(a[2]).unwrap())[0] == b't'
                     })
-                    .map(|a| {
-                        let mut a = a;
-                        a.sort_unstable();
-                        a
-                    })
-                    .collect::<Vec<_>>()
+                    .filter(|a| graph.contains_edge(a[1], a[2]))
+                    .count()
             })
-            .collect::<BTreeSet<_>>()
-            .into_iter()
-            .filter(|nodes| {
-                nodes.iter().any(|n| {
-                    let high_byte = u16::to_ne_bytes(*graph.node_weight(*n).unwrap())[0];
-                    high_byte == b't'
-                })
-            })
-            .count()
+            .sum()
     }
 }
 
@@ -65,11 +63,13 @@ impl SolutionGold<usize, String> for Day {
     const INPUT_SAMPLE_GOLD: &'static str = include_str!("input_sample_gold.txt");
 
     fn calculate_gold(input: &str) -> String {
-        let mut graph = petgraph::Graph::<u16, (), _, _>::new_undirected();
-        let mut node_lookup = HashMap::new();
-        input.lines().for_each(|l| {
-            let n1 = u16::from_ne_bytes(l.as_bytes()[0..=1].try_into().unwrap());
-            let n2 = u16::from_ne_bytes(l.as_bytes()[3..=4].try_into().unwrap());
+        let mut graph = petgraph::graph::UnGraph::<u16, ()>::new_undirected();
+        let mut node_lookup = HashMap::<_, _, FnvBuildHasher>::default();
+        let input = input.as_bytes();
+        let line_count = (input.len() + 1) / 6;
+        (0..line_count).for_each(|i| {
+            let n1 = u16::from_ne_bytes(input[i * 6..][..2].try_into().unwrap());
+            let n2 = u16::from_ne_bytes(input[i * 6 + 3..][..2].try_into().unwrap());
 
             let node1_key = *node_lookup.entry(n1).or_insert_with(|| graph.add_node(n1));
             let node2_key = *node_lookup.entry(n2).or_insert_with(|| graph.add_node(n2));
@@ -77,7 +77,7 @@ impl SolutionGold<usize, String> for Day {
             graph.add_edge(node1_key, node2_key, ());
         });
 
-        let mut overal_largest_group = None::<Vec<NodeIndex>>;
+        let mut overal_largest_group = None::<TinyVec<[NodeIndex; 16]>>;
         graph.node_indices().for_each(|leader_idx| {
             // assign the lowest value in a group to be the "leader" to prevent duplicate work
             // only look at nodes that have a higher value than the leader
@@ -85,62 +85,51 @@ impl SolutionGold<usize, String> for Day {
             let neighbours = graph
                 .neighbors_undirected(leader_idx)
                 .filter(|&neighbour| graph.node_weight(neighbour).unwrap() > &leader_val)
-                .collect::<Vec<_>>();
+                .collect::<TinyVec<[_; 16]>>();
 
             // for each group size, take a combination of neighbours and see if they are all connected
-            // TODO: can set min bound to overal largest group size here
-            let largest_group = (2usize..=neighbours.len())
+            // part 1 defined groups of size 3, so we can start from 2 required neighbours
+            let min_size = overal_largest_group.as_ref().map(|g| g.len()).unwrap_or(2);
+            let largest_group = (min_size..neighbours.len())
                 .rev()
-                .flat_map(|group_size| {
+                .flat_map(|neighbour_count| {
                     // very hacky way of getting all combinations of N elements
-                    (0u32..1 << (group_size + 1))
-                        .filter(|&num| num.count_ones() == group_size as u32)
+                    (((1u32 << neighbour_count) - 1)..1 << (neighbour_count + 1))
+                        .filter(|&num| num.count_ones() == neighbour_count as u32)
                         .map(|bitmap| {
-                            let mut group = vec![leader_idx];
-                            group.extend(
-                                (0..neighbours.len())
-                                    .filter(|i| bitmap & (1 << i) != 0)
-                                    .map(|i| neighbours[i]),
-                            );
-                            group
+                            (0..neighbours.len())
+                                .filter(|i| bitmap & (1 << i) != 0)
+                                .map(|i| neighbours[i])
+                                .collect::<TinyVec<[_; 16]>>()
                         })
                         .filter(|group| {
                             // every item in the group must connect to all other items in the group
-                            (0..group.len()).all(|i| {
-                                (0..group.len())
-                                    .all(|j| i == j || graph.contains_edge(group[i], group[j]))
+                            (0..group.len() - 1).all(|i| {
+                                (i + 1..group.len())
+                                    .all(|j| graph.contains_edge(group[i], group[j]))
                             })
                         })
                         .max_by_key(|group| group.len())
                 })
                 .next();
 
-            if let Some(largest_group) = largest_group {
+            if let Some(mut largest_group) = largest_group {
                 if overal_largest_group.is_none()
                     || (overal_largest_group.is_some()
-                        && overal_largest_group.as_ref().unwrap().len() < largest_group.len())
+                        && overal_largest_group.as_ref().unwrap().len() < largest_group.len() + 1)
                 {
+                    largest_group.push(leader_idx);
                     overal_largest_group = Some(largest_group);
                 }
             }
         });
 
-        // verify solution
-        let bla = overal_largest_group.as_ref().unwrap();
-        for i in 0..bla.len() {
-            for j in 0..bla.len() {
-                if i != j {
-                    debug_assert!(graph.contains_edge(bla[i], bla[j]));
-                }
-            }
-        }
-
         let mut vals = overal_largest_group
             .unwrap()
             .into_iter()
             .map(|idx| graph.node_weight(idx).unwrap())
-            .map(|num| String::from_utf8(num.to_ne_bytes().to_vec()).unwrap())
-            .collect::<Vec<_>>();
+            .map(|num| String::from_utf8_lossy(&num.to_ne_bytes()).to_string())
+            .collect::<TinyVec<[_; 16]>>();
 
         vals.sort_unstable();
 
