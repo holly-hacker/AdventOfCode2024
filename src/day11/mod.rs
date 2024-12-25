@@ -8,7 +8,7 @@ use super::*;
 pub struct Day;
 
 impl SolutionSilver<usize> for Day {
-    const DAY: u32 = 9;
+    const DAY: u32 = 11;
     const INPUT_SAMPLE: &'static str = include_str!("input_sample.txt");
     const INPUT_REAL: &'static str = include_str!("input_real.txt");
 
